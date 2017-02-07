@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.Arrays;
+//import java.util.Arrays;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import tud.ke.ml.project.util.Pair;
@@ -19,7 +19,7 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 
 	protected double[] scaling;
 	protected double[] translation;
-	protected List<List<Object>> SavedModel;
+	protected List<List<Object>> SavedModel = new ArrayList<List<Object>>();
 	
 	@Override
 	public String getMatrikelNumbers() {
@@ -29,20 +29,9 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 	@Override
 	protected void learnModel(List<List<Object>> data) {
 		//Initialize Attributes to save training data
-		SavedModel = new ArrayList<List<Object>>();
+		//SavedModel = new ArrayList<List<Object>>();
 		for(int i=0; i<data.size(); i++){
 			SavedModel.add(data.get(i));
-		}
-		//TODO: remove debug stream below this line
-		for(List<Object> lo : SavedModel){
-			//System.out.println(lo);
-			for(Object o : lo){
-				if(o instanceof String){
-				//	System.out.println("String");
-				}else{System.out.println("Double");}
-				//System.out.println(o);
-			}
-				
 		}
 	}
 
@@ -87,12 +76,32 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 
 	@Override
 	protected Object getWinner(Map<Object, Double> votes) {
-		Object currMaxKey="";
+		Object currMaxKey= "" ;
 		double currMaxValue = 0;
 		for(Object key : votes.keySet()){
 			if(votes.get(key) > currMaxValue){
 				currMaxValue = votes.get(key);
 				currMaxKey = key;
+			}
+		}
+		System.out.println("Values :"+votes.values());
+		double best=votes.get(currMaxKey);
+		
+		for(Object keys : votes.keySet()){
+			if(votes.get(keys) == votes.get(currMaxKey)){
+				int sum = 0;
+				int bestsum = 0;
+				for(List<Object> instance : SavedModel){
+					if(instance.get(instance.size()-1) == currMaxKey){
+						bestsum++;
+					}
+					if(instance.get(instance.size()-1) == keys){
+						sum++;
+					}
+				}
+				if( sum > bestsum){
+				currMaxKey = keys;
+				}
 			}
 		}
 		return currMaxKey;
@@ -101,36 +110,46 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 	@Override
 	protected Object vote(List<Pair<List<Object>, Double>> subset) {
 		Object winningClass = "";
-		//call getUnweightedVotes, plug it's output into getWinner
 		Map<Object, Double> votes = new HashMap<Object, Double>();
 		if(isInverseWeighting()){
 			votes = getWeightedVotes(subset);
 		}else{votes = getUnweightedVotes(subset);}
-		
 		winningClass = getWinner(votes);
 		return winningClass;
 	}
 
 	@Override
 	protected List<Pair<List<Object>, Double>> getNearest(List<Object> data) {
-		List<Pair<List<Object>, Double>> Nearest = null;
-		Pair<List<Object>, Double> tempPair = null;
-		int k = getkNearest();
+		List<Pair<List<Object>, Double>> Nearest;
+		List<Pair<List<Object>, Double>> EvenNearer;
+		//Pair<List<Object>, Double> tempPair = new Pair<List<Object>, Double>();
+		List<Object> tmpList = new ArrayList<Object>();
+		
+		Nearest = new ArrayList<Pair<List<Object>, Double>>();
+		
+		//TODO remove test thing
+		//int k = getkNearest();
+		int k = 4;
 		int j;
 		double distance;
+		List<Object> tempL;
 		for(List<Object> trainInstance : SavedModel){
+			
+			tempL = trainInstance.subList(0, (int)trainInstance.size()-1);
 			if(getMetric() == 0){
-				distance = determineManhattanDistance(data, trainInstance);
+				distance = determineManhattanDistance(data.subList(0, data.size()-1), tempL);
 			}else{
-				distance = determineEuclideanDistance(data, trainInstance);
+				distance = determineEuclideanDistance(data.subList(0, data.size()-1), tempL);
 			}
-			tempPair.setA(trainInstance);
-			tempPair.setB(distance);
+			
+			Pair<List<Object>, Double> tempPair = new Pair<List<Object>, Double>(trainInstance, distance);
 			Nearest.add(tempPair);
 		}
+		
 		for(int i=1; i<Nearest.size(); i++){
 			j = i;
 			while((j > 0) && (Nearest.get(j-1).getB() > Nearest.get(j).getB())){
+				Pair<List<Object>, Double> tempPair = new Pair<List<Object>, Double>(new ArrayList<Object>(),0.0);
 				tempPair.setA(Nearest.get(j).getA());
 				tempPair.setB(Nearest.get(j).getB());
 				Nearest.set(j, Nearest.get(j-1));
@@ -138,7 +157,12 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 				j = j -1;
 			}
 		}
-		return Nearest.subList(0, k-1);
+		
+		
+		EvenNearer = Nearest.subList(0, k); 
+		
+		
+		return EvenNearer;
 	}
 
 	@Override
@@ -184,6 +208,10 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 
 	@Override
 	protected double[][] normalizationScaling() {
+		//takes SavedModel and normalizes it's numerical attributes
+		//ignores class Attributes and nominal attributes (!!build that check!!)
+		//returns scaling and translation factors -> use these outside this function
+		// ---> to normalize SavedModel values
 		throw new NotImplementedException();
 	}
 
