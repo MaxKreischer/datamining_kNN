@@ -84,7 +84,7 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 				currMaxKey = key;
 			}
 		}
-		System.out.println("Values :"+votes.values());
+	
 		double best=votes.get(currMaxKey);
 		
 		for(Object keys : votes.keySet()){
@@ -126,10 +126,21 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 		List<Object> tmpList = new ArrayList<Object>();
 		
 		Nearest = new ArrayList<Pair<List<Object>, Double>>();
+		if(isNormalizing()){
+			
+			double[][] normalization = normalizationScaling();
+			
+			scaling = normalization[0];
+			translation = normalization[1];
+			for(int i =0; i<SavedModel.size();i++){
+				for(int j=0;j<SavedModel.get(0).size();j++){
+					//
+				}
+			}
+		}
 		
-		//TODO remove test thing
-		//int k = getkNearest();
-		int k = 4;
+		
+		int k = getkNearest();		
 		int j;
 		double distance;
 		List<Object> tempL;
@@ -209,10 +220,40 @@ public class NearestNeighbor extends INearestNeighbor implements Serializable {
 	@Override
 	protected double[][] normalizationScaling() {
 		//takes SavedModel and normalizes it's numerical attributes
+		//first index: by instance
+		//second index: by entries in instance
+		double[] scaling = new double[SavedModel.get(0).size()];
+		double[] translation = new double[SavedModel.get(0).size()];
+		double min=0; 
+		double max=0; 
+		double avg=0;
+		for(int inst=0; inst<SavedModel.size();inst++){
+			for(int obj=0; obj<SavedModel.get(0).size();obj++)
+				if(SavedModel.get(inst).get(obj) instanceof Double){
+					min = (double)SavedModel.get(0).get(obj);
+					max = (double)SavedModel.get(0).get(obj);
+					for(int k=0; k<SavedModel.size();k++){
+						if(min > (double)SavedModel.get(k).get(obj)){
+							min = (double)SavedModel.get(k).get(obj);
+						}
+						if(max < (double)SavedModel.get(k).get(obj)){
+							min = (double)SavedModel.get(k).get(obj);
+						}
+					}
+				scaling[obj] = 	max-min;
+				translation[obj] = min;
+				}else{
+					scaling[obj] = 1;
+					translation[obj] = 0;
+			}	
+		}
+		double[][] norm= new double[2][];
+		norm[0] = scaling;
+		norm[1] = translation;
 		//ignores class Attributes and nominal attributes (!!build that check!!)
 		//returns scaling and translation factors -> use these outside this function
 		// ---> to normalize SavedModel values
-		throw new NotImplementedException();
+		return norm;
 	}
 
 }
